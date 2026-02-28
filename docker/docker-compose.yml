@@ -1,0 +1,65 @@
+version: "3.9"
+
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: mobility_postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: mobility
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - mobility_net
+
+  airflow-webserver:
+    image: apache/airflow:2.8.1
+    container_name: airflow_webserver
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/mobility
+      AIRFLOW__CORE__FERNET_KEY: ""
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../airflow/dags:/opt/airflow/dags
+    command: webserver
+    networks:
+      - mobility_net
+
+  airflow-scheduler:
+    image: apache/airflow:2.8.1
+    container_name: airflow_scheduler
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/mobility
+      AIRFLOW__CORE__FERNET_KEY: ""
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    volumes:
+      - ../airflow/dags:/opt/airflow/dags
+    command: scheduler
+    networks:
+      - mobility_net
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: mobility_metabase
+    ports:
+      - "3000:3000"
+    networks:
+      - mobility_net
+
+volumes:
+  postgres_data:
+
+networks:
+  mobility_net:
