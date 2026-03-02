@@ -1,12 +1,26 @@
-services:
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.8.1
+  environment:
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+  volumes:
+    - ../airflow/dags:/opt/airflow/dags
+  depends_on:
+    - postgres
+  networks:
+    - mobility_net
 
+
+
+services:
   postgres:
     image: postgres:15
     container_name: mobility_postgres
     environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: mobility
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
@@ -14,39 +28,28 @@ services:
     networks:
       - mobility_net
 
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow_init
+    entrypoint: /bin/bash
+    command: -c 'airflow db migrate && airflow users create --username "${AIRFLOW_ADMIN_USER}" --password "${AIRFLOW_ADMIN_PASSWORD}" --firstname "${AIRFLOW_ADMIN_FIRSTNAME}" --lastname "${AIRFLOW_ADMIN_LASTNAME}" --role Admin --email "${AIRFLOW_ADMIN_EMAIL}"'
+    restart: "no"
+
   airflow-webserver:
-    image: apache/airflow:2.8.1
+    <<: *airflow-common
     container_name: airflow_webserver
-    depends_on:
-      - postgres
-    environment:
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/mobility
-      AIRFLOW__CORE__FERNET_KEY: ""
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
     ports:
       - "8080:8080"
-    volumes:
-      - ../airflow/dags:/opt/airflow/dags
     command: webserver
-    networks:
-      - mobility_net
+    depends_on:
+      - airflow-init
 
   airflow-scheduler:
-    image: apache/airflow:2.8.1
+    <<: *airflow-common
     container_name: airflow_scheduler
-    depends_on:
-      - postgres
-    environment:
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/mobility
-      AIRFLOW__CORE__FERNET_KEY: ""
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-    volumes:
-      - ../airflow/dags:/opt/airflow/dags
     command: scheduler
-    networks:
-      - mobility_net
+    depends_on:
+      - airflow-init
 
   metabase:
     image: metabase/metabase:latest
