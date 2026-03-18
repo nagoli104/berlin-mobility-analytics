@@ -59,9 +59,37 @@ services:
     container_name: mobility_metabase
     ports:
       - "3000:3000"
+    environment:
+      MB_SETUP_TOKEN: ${MB_SETUP_TOKEN}
+      MB_LOAD_SAMPLE_CONTENT: "false"
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5432
+      MB_DB_USER: ${POSTGRES_USER}
+      MB_DB_PASS: ${POSTGRES_PASSWORD}
+      MB_DB_HOST: postgres
+    depends_on:
+      - postgres
     networks:
       - mobility_net
 
+  metabase-seed:
+    image: python:3.11-slim
+    container_name: mobility_metabase_seed
+    depends_on:
+    - metabase
+    environment:
+      MB_SETUP_TOKEN: ${MB_SETUP_TOKEN}
+      METABASE_SETUP_EMAIL: ${METABASE_SETUP_EMAIL}
+      METABASE_SETUP_PASSWORD: ${METABASE_SETUP_PASSWORD}
+      METABASE_SETUP_FIRSTNAME: ${METABASE_SETUP_FIRSTNAME}
+      METABASE_SETUP_LASTNAME: ${METABASE_SETUP_LASTNAME}
+    volumes:
+      - ../scripts:/scripts
+    networks:
+      - mobility_net
+    entrypoint: /bin/sh
+    command: -c "pip install --no-cache-dir psycopg2-binary >/dev/null && apt-get update >/dev/null && apt-get install -y curl >/dev/null && chmod +x /scripts/metabase_seed.sh && /scripts/metabase_seed.sh"
 volumes:
   postgres_data:
 
