@@ -206,3 +206,13 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# local sqlite files
+.cache.sqlite
+.cache/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# exclude local data files
+data/
