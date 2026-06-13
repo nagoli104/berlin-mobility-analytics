@@ -1,0 +1,7 @@
+apache-airflow-providers-postgres
+openmeteo-requests
+openpyxl
+pandas
+psycopg2-binary
+requests-cache
+retry-requests
