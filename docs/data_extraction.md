@@ -183,6 +183,23 @@ The loader creates these raw tables if they do not already exist:
 
 The session timezone is set to `Europe/Berlin` before loading so local mobility timestamps without an explicit offset are interpreted consistently.
 
+### Raw data validation
+
+After loading, run the raw data checks with:
+
+    uv run python scripts/validate_raw_data.py \
+      --database-url postgresql://airflow:airflow@localhost:5432/mobility
+
+The validation script checks basic raw-layer assumptions:
+
+- raw tables are populated
+- required timestamp and station keys are present
+- mobility station-hour keys are unique
+- bike counts are not negative
+- station metadata IDs are unique
+- station coordinates are in plausible ranges
+- weather timestamps are unique
+
 ---
 
 ## 4. Modeling relevance
@@ -225,7 +242,7 @@ Possible join keys for v1:
 
 - Excel formatting-based quality flags in the mobility workbook are not yet extracted.
 - The weather extraction script currently operates on one coordinate pair per run.
-- No schema validation or automated data quality checks are implemented yet.
+- Data quality checks are basic raw-table checks, not full dbt tests yet.
 - The loaded PostgreSQL tables are raw tables, not final analytical marts.
 
 ---
@@ -237,8 +254,5 @@ Possible join keys for v1:
 - decide whether weather should be modeled:
   - at one Berlin-wide location
   - or at station level
-- add data quality checks for:
-  - invalid timestamps
-  - duplicate station-hour rows
-  - structurally missing vs technically missing observations
 - implement dbt staging models on top of the raw PostgreSQL tables
+- extend data quality checks for structurally missing vs technically missing observations
