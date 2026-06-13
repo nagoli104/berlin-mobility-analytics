@@ -282,7 +282,7 @@ A combined hourly table can be formed from:
 
 ## Current limitations
 
-- the bike extraction script currently defines the year range in code rather than via CLI arguments
+- the bike extraction script does not yet extract Excel formatting-based quality flags
 - the weather extraction script operates on a single coordinate pair per run
 - no explicit station activation filter is currently applied using `installed`
 - no quality flag is derived from Excel formatting

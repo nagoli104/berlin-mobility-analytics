@@ -64,9 +64,25 @@ A simple direction derivation is currently applied based on whether the descript
 - `Nord`
 - `Süd`
 
-### Current scope
+### Parameters
 
-At the moment, the script is parameterized internally through the `main()` function and currently loads only the selected year range defined there.
+The script is implemented as a command-line tool with defaults matching the current 2025 extraction.
+
+Common parameters:
+
+- `--file-path`
+- `--start-year`
+- `--end-year`
+- `--output-counts`
+- `--output-metadata`
+
+Example:
+
+    python scripts/bike_data_extraction.py \
+      --start-year 2025 \
+      --end-year 2025 \
+      --output-counts data/mobility_long.csv \
+      --output-metadata data/mobility_metadata.csv
 
 ### Notes
 
@@ -185,7 +201,6 @@ Possible join keys for v1:
 
 ## 4. Current limitations
 
-- The bike extraction script is currently configured through values in `main()` rather than command-line parameters.
 - Excel formatting-based quality flags in the mobility workbook are not yet extracted.
 - The weather extraction script currently operates on one coordinate pair per run.
 - No schema validation or automated data quality checks are implemented yet.
@@ -195,7 +210,7 @@ Possible join keys for v1:
 
 ## 5. Planned next steps
 
-- extend bike extraction to cover the full intended year range
+- run bike extraction for the full intended year range
 - define the first stable analytical grain for integrated mobility and weather data
 - decide whether weather should be modeled:
   - at one Berlin-wide location
