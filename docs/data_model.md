@@ -94,7 +94,13 @@ The current exported datasets can be understood as:
 - `mobility_metadata.csv` → proto-`dim_station`
 - weather export CSV → proto-`fact_weather_hourly`
 
-These files are not yet warehouse tables, but they already establish the analytical grain, keys, and field structure of the model.
+These files can be loaded into raw PostgreSQL tables before dbt staging. They already establish the analytical grain, keys, and field structure of the model.
+
+Current raw table mapping:
+
+- `mobility_long.csv` → `raw_mobility_counts`
+- `mobility_metadata.csv` → `raw_station_metadata`
+- weather export CSV → `raw_weather_hourly`
 
 ---
 

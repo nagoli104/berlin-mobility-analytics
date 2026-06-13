@@ -5,7 +5,7 @@ The project currently uses two standalone extraction scripts:
 - `bike_data_extraction.py`
 - `openmeteo_weather_export.py`
 
-Together, they produce the raw CSV inputs for later modeling steps in SQL/dbt and downstream analysis in Metabase.
+Together, they produce the raw CSV inputs. The utility script `load_csv_to_postgres.py` loads those files into PostgreSQL for later modeling in SQL/dbt and downstream analysis in Metabase.
 
 ---
 
@@ -163,7 +163,29 @@ The output includes:
 
 ---
 
-## 3. Modeling relevance
+## 3. Loading CSVs into PostgreSQL
+
+The extracted CSV files can be loaded into the local `mobility` PostgreSQL database with:
+
+    uv run python scripts/load_csv_to_postgres.py \
+      --database-url postgresql://airflow:airflow@localhost:5432/mobility \
+      --counts data/mobility_long.csv \
+      --metadata data/mobility_metadata.csv \
+      --weather data/weather_data_2015_2025.csv
+
+By default, the loader truncates and reloads the target raw tables. Use `--if-exists append` to append instead.
+
+The loader creates these raw tables if they do not already exist:
+
+- `raw_mobility_counts`
+- `raw_station_metadata`
+- `raw_weather_hourly`
+
+The session timezone is set to `Europe/Berlin` before loading so local mobility timestamps without an explicit offset are interpreted consistently.
+
+---
+
+## 4. Modeling relevance
 
 These two extraction scripts form the raw data layer of the project.
 
@@ -199,16 +221,16 @@ Possible join keys for v1:
 
 ---
 
-## 4. Current limitations
+## 5. Current limitations
 
 - Excel formatting-based quality flags in the mobility workbook are not yet extracted.
 - The weather extraction script currently operates on one coordinate pair per run.
 - No schema validation or automated data quality checks are implemented yet.
-- The extracted CSVs currently represent raw-to-staged outputs, not final analytical marts.
+- The loaded PostgreSQL tables are raw tables, not final analytical marts.
 
 ---
 
-## 5. Planned next steps
+## 6. Planned next steps
 
 - run bike extraction for the full intended year range
 - define the first stable analytical grain for integrated mobility and weather data
@@ -219,4 +241,4 @@ Possible join keys for v1:
   - invalid timestamps
   - duplicate station-hour rows
   - structurally missing vs technically missing observations
-- implement dbt staging models on top of the exported CSVs
+- implement dbt staging models on top of the raw PostgreSQL tables
