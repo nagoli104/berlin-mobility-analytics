@@ -12,6 +12,19 @@ All services are configured via a `.env` file located in the project root.
 
 ### 1️⃣ Environment Setup
 
+Create a project-local Python environment with `uv`:
+
+    uv sync
+
+Run host-side extraction scripts through that environment:
+
+    uv run python scripts/bike_data_extraction.py --help
+    uv run python scripts/openmeteo_weather_export.py --help
+
+Airflow runs in Docker. If you need to import-check Airflow DAGs on the host, install the optional Airflow dependency group:
+
+    uv sync --group airflow
+
 Create a local `.env` file based on `.env.example`:
 
     cp .env.example .env

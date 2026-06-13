@@ -78,7 +78,7 @@ Common parameters:
 
 Example:
 
-    python scripts/bike_data_extraction.py \
+    uv run python scripts/bike_data_extraction.py \
       --start-year 2025 \
       --end-year 2025 \
       --output-counts data/mobility_long.csv \
