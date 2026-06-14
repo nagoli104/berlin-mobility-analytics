@@ -204,21 +204,42 @@ CARDS = [
         },
     },
     {
-        "name": "Bike Counts by Weather",
-        "description": "Average and total bike counts split by precipitation state.",
+        "name": "Bike Counts by Rain Intensity",
+        "description": "Average hourly bike counts by precipitation intensity bucket.",
         "display": "bar",
         "query": """
+            with hourly_counts as (
+                select
+                    observed_at,
+                    max(precipitation) as precipitation,
+                    sum(bike_count) as bike_count
+                from analytics.fact_mobility_weather
+                group by observed_at
+            ),
+
+            bucketed as (
+                select
+                    case
+                        when precipitation = 0 then '0 None'
+                        when precipitation < 0.5 then '1 Trace'
+                        when precipitation < 2 then '2 Light'
+                        else '3 Moderate+'
+                    end as rain_bucket,
+                    bike_count
+                from hourly_counts
+            )
+
             select
-                case when precipitation > 0 then 'Wet' else 'Dry' end as precipitation_state,
-                avg(bike_count) as avg_bike_count,
-                sum(bike_count) as bike_count
-            from analytics.fact_mobility_weather
-            group by precipitation_state
-            order by precipitation_state
+                rain_bucket,
+                count(*) as hours,
+                avg(bike_count) as avg_bike_count_per_hour
+            from bucketed
+            group by rain_bucket
+            order by rain_bucket
         """,
         "visualization_settings": {
-            "graph.dimensions": ["precipitation_state"],
-            "graph.metrics": ["avg_bike_count", "bike_count"],
+            "graph.dimensions": ["rain_bucket"],
+            "graph.metrics": ["avg_bike_count_per_hour"],
         },
     },
 ]
@@ -227,7 +248,11 @@ DASHCARD_LAYOUT = {
     "Daily Bike Counts": {"row": 0, "col": 0, "size_x": 12, "size_y": 8},
     "Bike Counts by Hour": {"row": 0, "col": 12, "size_x": 12, "size_y": 8},
     "Top Stations by Bike Count": {"row": 8, "col": 0, "size_x": 12, "size_y": 8},
-    "Bike Counts by Weather": {"row": 8, "col": 12, "size_x": 12, "size_y": 8},
+    "Bike Counts by Rain Intensity": {"row": 8, "col": 12, "size_x": 12, "size_y": 8},
+}
+
+LEGACY_CARD_NAMES = {
+    "Bike Counts by Weather",
 }
 
 
@@ -313,6 +338,16 @@ def ensure_card(card, collection_id):
         return existing["id"]
     created = api("/api/card", payload, method="POST")
     return created["id"]
+
+
+def archive_legacy_cards(collection_id):
+    for card in api("/api/card"):
+        if (
+            card.get("collection_id") == collection_id
+            and card.get("name") in LEGACY_CARD_NAMES
+            and not card.get("archived")
+        ):
+            api(f"/api/card/{card['id']}", {"archived": True}, method="PUT")
 
 
 def find_dashboard(collection_id):
@@ -428,6 +463,7 @@ for field in table_metadata.get("fields", []):
 print(f"Configured metadata for analytics.fact_mobility_weather ({updated_fields} fields).")
 
 collection_id = ensure_collection()
+archive_legacy_cards(collection_id)
 card_ids = {}
 for card in CARDS:
     card_ids[card["name"]] = ensure_card(card, collection_id)
