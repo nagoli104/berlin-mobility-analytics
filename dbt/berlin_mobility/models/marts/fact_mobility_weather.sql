@@ -39,6 +39,8 @@ select
     mobility_counts.bike_count,
 
     cast(timezone('Europe/Berlin', mobility_counts.observed_at) as date) as observed_date,
+    extract(year from timezone('Europe/Berlin', mobility_counts.observed_at))::integer as observed_year,
+    extract(month from timezone('Europe/Berlin', mobility_counts.observed_at))::integer as observed_month,
     extract(hour from timezone('Europe/Berlin', mobility_counts.observed_at))::integer as observed_hour,
     extract(isodow from timezone('Europe/Berlin', mobility_counts.observed_at))::integer as observed_isodow,
     extract(isodow from timezone('Europe/Berlin', mobility_counts.observed_at))::integer in (6, 7) as is_weekend,

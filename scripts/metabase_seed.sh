@@ -128,6 +128,8 @@ FIELD_METADATA = {
     "station_id": {"display_name": "Station ID", "semantic_type": "type/Category"},
     "bike_count": {"display_name": "Bike Count", "semantic_type": "type/Quantity"},
     "observed_date": {"display_name": "Observed Date"},
+    "observed_year": {"display_name": "Observed Year", "semantic_type": "type/Category"},
+    "observed_month": {"display_name": "Observed Month", "semantic_type": "type/Category"},
     "observed_hour": {"display_name": "Observed Hour"},
     "observed_isodow": {"display_name": "Observed ISO Day of Week"},
     "is_weekend": {"display_name": "Is Weekend"},
@@ -160,6 +162,9 @@ CARDS = [
                 observed_date,
                 sum(bike_count) as bike_count
             from analytics.fact_mobility_weather
+            where 1 = 1
+                [[and observed_year = {{year}}]]
+                [[and is_weekend::text = {{is_weekend}}]]
             group by observed_date
             order by observed_date
         """,
@@ -177,6 +182,9 @@ CARDS = [
                 observed_hour,
                 sum(bike_count) as bike_count
             from analytics.fact_mobility_weather
+            where 1 = 1
+                [[and observed_year = {{year}}]]
+                [[and is_weekend::text = {{is_weekend}}]]
             group by observed_hour
             order by observed_hour
         """,
@@ -194,6 +202,9 @@ CARDS = [
                 coalesce(station_description, station_id) as station,
                 sum(bike_count) as bike_count
             from analytics.fact_mobility_weather
+            where 1 = 1
+                [[and observed_year = {{year}}]]
+                [[and is_weekend::text = {{is_weekend}}]]
             group by station
             order by bike_count desc
             limit 15
@@ -214,6 +225,9 @@ CARDS = [
                     max(precipitation) as precipitation,
                     sum(bike_count) as bike_count
                 from analytics.fact_mobility_weather
+                where 1 = 1
+                    [[and observed_year = {{year}}]]
+                    [[and is_weekend::text = {{is_weekend}}]]
                 group by observed_at
             ),
 
@@ -253,6 +267,40 @@ DASHCARD_LAYOUT = {
 
 LEGACY_CARD_NAMES = {
     "Bike Counts by Weather",
+}
+
+DASHBOARD_PARAMETERS = [
+    {
+        "id": "year",
+        "name": "Year",
+        "slug": "year",
+        "type": "category",
+        "sectionId": "string",
+    },
+    {
+        "id": "is_weekend",
+        "name": "Weekend",
+        "slug": "is_weekend",
+        "type": "category",
+        "sectionId": "string",
+    },
+]
+
+CARD_TEMPLATE_TAGS = {
+    "year": {
+        "id": "year",
+        "name": "year",
+        "display-name": "Year",
+        "type": "number",
+        "required": False,
+    },
+    "is_weekend": {
+        "id": "is_weekend",
+        "name": "is_weekend",
+        "display-name": "Weekend",
+        "type": "text",
+        "required": False,
+    },
 }
 
 
@@ -324,7 +372,10 @@ def card_payload(card, collection_id):
         "dataset_query": {
             "database": int(database_id),
             "type": "native",
-            "native": {"query": normalize_sql(card["query"])},
+            "native": {
+                "query": normalize_sql(card["query"]),
+                "template-tags": CARD_TEMPLATE_TAGS,
+            },
         },
         "visualization_settings": card["visualization_settings"],
     }
@@ -389,7 +440,14 @@ def dashboard_card_payload(dashcard_id, card_id, card_name):
         "id": dashcard_id,
         "card_id": card_id,
         "card": {"id": card_id},
-        "parameter_mappings": [],
+        "parameter_mappings": [
+            {
+                "parameter_id": parameter["id"],
+                "card_id": card_id,
+                "target": ["variable", ["template-tag", parameter["id"]]],
+            }
+            for parameter in DASHBOARD_PARAMETERS
+        ],
         "series": [],
         "size_x": layout["size_x"],
         "size_y": layout["size_y"],
@@ -425,6 +483,7 @@ def ensure_dashboard_cards(dashboard_id, card_ids):
             "collection_id": dashboard.get("collection_id"),
             "dashcards": dashcards,
             "tabs": dashboard.get("tabs", []),
+            "parameters": DASHBOARD_PARAMETERS,
         },
         method="PUT",
     )
