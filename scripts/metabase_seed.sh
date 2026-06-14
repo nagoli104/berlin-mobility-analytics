@@ -147,6 +147,89 @@ FIELD_METADATA = {
     "weather_description": {"display_name": "Weather Description", "semantic_type": "type/Description"},
 }
 
+COLLECTION_NAME = "Mobility Analytics"
+DASHBOARD_NAME = "Mobility Overview"
+
+CARDS = [
+    {
+        "name": "Daily Bike Counts",
+        "description": "Total bike counts by observation date.",
+        "display": "line",
+        "query": """
+            select
+                observed_date,
+                sum(bike_count) as bike_count
+            from analytics.fact_mobility_weather
+            group by observed_date
+            order by observed_date
+        """,
+        "visualization_settings": {
+            "graph.dimensions": ["observed_date"],
+            "graph.metrics": ["bike_count"],
+        },
+    },
+    {
+        "name": "Bike Counts by Hour",
+        "description": "Total bike counts by local hour of day.",
+        "display": "bar",
+        "query": """
+            select
+                observed_hour,
+                sum(bike_count) as bike_count
+            from analytics.fact_mobility_weather
+            group by observed_hour
+            order by observed_hour
+        """,
+        "visualization_settings": {
+            "graph.dimensions": ["observed_hour"],
+            "graph.metrics": ["bike_count"],
+        },
+    },
+    {
+        "name": "Top Stations by Bike Count",
+        "description": "Highest-volume counting stations by total bike count.",
+        "display": "bar",
+        "query": """
+            select
+                coalesce(station_description, station_id) as station,
+                sum(bike_count) as bike_count
+            from analytics.fact_mobility_weather
+            group by station
+            order by bike_count desc
+            limit 15
+        """,
+        "visualization_settings": {
+            "graph.dimensions": ["station"],
+            "graph.metrics": ["bike_count"],
+        },
+    },
+    {
+        "name": "Bike Counts by Weather",
+        "description": "Average and total bike counts split by precipitation state.",
+        "display": "bar",
+        "query": """
+            select
+                case when precipitation > 0 then 'Wet' else 'Dry' end as precipitation_state,
+                avg(bike_count) as avg_bike_count,
+                sum(bike_count) as bike_count
+            from analytics.fact_mobility_weather
+            group by precipitation_state
+            order by precipitation_state
+        """,
+        "visualization_settings": {
+            "graph.dimensions": ["precipitation_state"],
+            "graph.metrics": ["avg_bike_count", "bike_count"],
+        },
+    },
+]
+
+DASHCARD_LAYOUT = {
+    "Daily Bike Counts": {"row": 0, "col": 0, "size_x": 12, "size_y": 8},
+    "Bike Counts by Hour": {"row": 0, "col": 12, "size_x": 12, "size_y": 8},
+    "Top Stations by Bike Count": {"row": 8, "col": 0, "size_x": 12, "size_y": 8},
+    "Bike Counts by Weather": {"row": 8, "col": 12, "size_x": 12, "size_y": 8},
+}
+
 
 def api(path, payload=None, method=None):
     data = None if payload is None else json.dumps(payload).encode("utf-8")
@@ -170,6 +253,146 @@ def find_table():
         if table.get("schema") == TABLE_SCHEMA and table.get("name") == TABLE_NAME:
             return table
     return None
+
+
+def normalize_sql(sql):
+    return "\n".join(line.strip() for line in sql.strip().splitlines())
+
+
+def find_collection():
+    for collection in api("/api/collection"):
+        if collection.get("name") == COLLECTION_NAME:
+            return collection
+    return None
+
+
+def ensure_collection():
+    collection = find_collection()
+    if collection:
+        return collection["id"]
+    created = api(
+        "/api/collection",
+        {
+            "name": COLLECTION_NAME,
+            "description": "Saved questions and dashboards for the Berlin mobility analytics project.",
+            "color": "#509EE3",
+        },
+        method="POST",
+    )
+    return created["id"]
+
+
+def find_card(name, collection_id):
+    payload = api("/api/card")
+    for card in payload:
+        if card.get("name") == name and card.get("collection_id") == collection_id:
+            return card
+    return None
+
+
+def card_payload(card, collection_id):
+    return {
+        "name": card["name"],
+        "description": card["description"],
+        "display": card["display"],
+        "collection_id": collection_id,
+        "dataset_query": {
+            "database": int(database_id),
+            "type": "native",
+            "native": {"query": normalize_sql(card["query"])},
+        },
+        "visualization_settings": card["visualization_settings"],
+    }
+
+
+def ensure_card(card, collection_id):
+    existing = find_card(card["name"], collection_id)
+    payload = card_payload(card, collection_id)
+    if existing:
+        api(f"/api/card/{existing['id']}", payload, method="PUT")
+        return existing["id"]
+    created = api("/api/card", payload, method="POST")
+    return created["id"]
+
+
+def find_dashboard(collection_id):
+    for dashboard in api("/api/dashboard"):
+        if dashboard.get("name") == DASHBOARD_NAME and dashboard.get("collection_id") == collection_id:
+            return dashboard
+    return None
+
+
+def ensure_dashboard(collection_id):
+    dashboard = find_dashboard(collection_id)
+    if dashboard:
+        dashboard_id = dashboard["id"]
+        api(
+            f"/api/dashboard/{dashboard_id}",
+            {
+                "name": DASHBOARD_NAME,
+                "description": "First overview dashboard for Berlin bike counts and weather context.",
+                "collection_id": collection_id,
+            },
+            method="PUT",
+        )
+        return dashboard_id
+    created = api(
+        "/api/dashboard",
+        {
+            "name": DASHBOARD_NAME,
+            "description": "First overview dashboard for Berlin bike counts and weather context.",
+            "collection_id": collection_id,
+        },
+        method="POST",
+    )
+    return created["id"]
+
+
+def dashboard_card_payload(dashcard_id, card_id, card_name):
+    layout = DASHCARD_LAYOUT[card_name]
+    return {
+        "id": dashcard_id,
+        "card_id": card_id,
+        "card": {"id": card_id},
+        "parameter_mappings": [],
+        "series": [],
+        "size_x": layout["size_x"],
+        "size_y": layout["size_y"],
+        "row": layout["row"],
+        "col": layout["col"],
+    }
+
+
+def ensure_dashboard_cards(dashboard_id, card_ids):
+    dashboard = api(f"/api/dashboard/{dashboard_id}")
+    existing_by_card_id = {}
+    for dashcard in dashboard.get("dashcards", []):
+        card_id = dashcard.get("card_id") or dashcard.get("card", {}).get("id")
+        if card_id:
+            existing_by_card_id[card_id] = dashcard
+
+    dashcards = []
+    next_temporary_id = -1
+    for card_name, card_id in card_ids.items():
+        existing = existing_by_card_id.get(card_id)
+        if existing:
+            dashcard_id = existing["id"]
+        else:
+            dashcard_id = next_temporary_id
+            next_temporary_id -= 1
+        dashcards.append(dashboard_card_payload(dashcard_id, card_id, card_name))
+
+    api(
+        f"/api/dashboard/{dashboard_id}",
+        {
+            "name": DASHBOARD_NAME,
+            "description": "First overview dashboard for Berlin bike counts and weather context.",
+            "collection_id": dashboard.get("collection_id"),
+            "dashcards": dashcards,
+            "tabs": dashboard.get("tabs", []),
+        },
+        method="PUT",
+    )
 
 
 table = None
@@ -203,6 +426,16 @@ for field in table_metadata.get("fields", []):
     updated_fields += 1
 
 print(f"Configured metadata for analytics.fact_mobility_weather ({updated_fields} fields).")
+
+collection_id = ensure_collection()
+card_ids = {}
+for card in CARDS:
+    card_ids[card["name"]] = ensure_card(card, collection_id)
+
+dashboard_id = ensure_dashboard(collection_id)
+ensure_dashboard_cards(dashboard_id, card_ids)
+
+print(f"Seeded {len(card_ids)} saved questions and dashboard '{DASHBOARD_NAME}'.")
 PY
 
 echo "Metabase setup finished."
