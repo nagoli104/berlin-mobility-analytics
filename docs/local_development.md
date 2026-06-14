@@ -69,6 +69,12 @@ If you already created the Postgres volume before these databases existed, recre
 
 ### 3️⃣ Start All Services
 
+Build the local Airflow image and start all services:
+
+    docker compose --env-file .env -f docker/docker-compose.yml up -d --build
+
+For subsequent starts without rebuilding:
+
     docker compose --env-file .env -f docker/docker-compose.yml up -d
 
 Verify running containers:
@@ -155,6 +161,23 @@ Run dbt tests:
     uv run dbt test \
       --project-dir dbt/berlin_mobility \
       --profiles-dir dbt/berlin_mobility
+
+---
+
+### 8️⃣ Run the Airflow Pipeline
+
+The DAG `mobility_raw_pipeline` orchestrates the local raw pipeline:
+
+- extract bike count CSVs
+- extract weather CSV
+- load raw PostgreSQL tables
+- validate raw tables
+- run dbt staging models
+- run dbt tests
+
+It is manually triggered by design. Start the stack, open Airflow, and trigger `mobility_raw_pipeline` from the UI.
+
+Default DAG parameters extract 2025 bike and weather data for a representative Berlin coordinate. Override the DAG params in the Airflow trigger dialog if needed.
 
 ---
 

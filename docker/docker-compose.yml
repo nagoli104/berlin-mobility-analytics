@@ -1,21 +1,31 @@
 x-airflow-common: &airflow-common
-  image: apache/airflow:2.8.1
+  build:
+    context: ..
+    dockerfile: docker/airflow/Dockerfile
+  image: berlin-mobility-airflow:latest
   environment:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${AIRFLOW_DB}
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-    AIRFLOW_CONN_MOBILITY_POSTGRES: ${AIRFLOW_CONN_MOBILITY_POSTGRES}
+    AIRFLOW_CONN_MOBILITY_POSTGRES: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${MOBILITY_DB}
     AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW__WEBSERVER__SECRET_KEY}
     AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: 5432
+    POSTGRES_USER: ${POSTGRES_USER}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    MOBILITY_DB: ${MOBILITY_DB}
+    MOBILITY_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${MOBILITY_DB}
   volumes:
     - ../airflow/dags:/opt/airflow/dags
+    - ../scripts:/opt/airflow/scripts
+    - ../data:/opt/airflow/data
+    - ../dbt:/opt/airflow/dbt
   depends_on:
     postgres:
       condition: service_healthy
   networks:
     - mobility_net
-
-
 
 services:
   postgres:
@@ -88,7 +98,7 @@ services:
     image: python:3.11-slim
     container_name: mobility_metabase_seed
     depends_on:
-    - metabase
+      - metabase
     environment:
       MB_SETUP_TOKEN: ${MB_SETUP_TOKEN}
       POSTGRES_USER: ${POSTGRES_USER}

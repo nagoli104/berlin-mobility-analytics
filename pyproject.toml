@@ -19,5 +19,6 @@ airflow = [
     "apache-airflow-providers-postgres",
 ]
 dbt = [
-    "dbt-postgres",
+    "dbt-core==1.10.22",
+    "dbt-postgres==1.9.1",
 ]
