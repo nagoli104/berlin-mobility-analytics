@@ -181,6 +181,22 @@ Default DAG parameters extract 2025 bike and weather data for a representative B
 
 ---
 
+### 9️⃣ View the Metabase Dashboard
+
+The local dashboard is seeded into Metabase from `scripts/metabase_seed.sh`.
+
+Open:
+
+    http://localhost:3000
+
+Navigate to:
+
+    Our analytics -> Mobility Analytics -> Mobility Overview
+
+For the dashboard refresh workflow and card definitions, see `docs/dashboard.md`.
+
+---
+
 ## Project Architecture (Local)
 
 Host (Mac)
