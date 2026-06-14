@@ -24,6 +24,10 @@ models:
                 inclusive: true
       - name: observed_date
         description: Calendar date of the observation.
+      - name: observed_year
+        description: Berlin-local calendar year of the observation.
+      - name: observed_month
+        description: Berlin-local calendar month of the observation.
       - name: observed_hour
         description: Hour of day in local time.
       - name: observed_isodow

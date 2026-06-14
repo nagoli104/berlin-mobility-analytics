@@ -7,6 +7,7 @@ The seed creates:
 - collection: `Mobility Analytics`
 - dashboard: `Mobility Overview`
 - saved questions built on `analytics.fact_mobility_weather`
+- dashboard filters for year and weekend/weekday selection
 
 ---
 
@@ -44,6 +45,13 @@ The seed is intended to be idempotent. It updates the existing collection, saved
 ---
 
 ## Current cards
+
+The dashboard currently has two filters:
+
+- `Year`: maps to `observed_year`
+- `Weekend`: maps to `is_weekend`
+
+The filters are applied to all seeded cards.
 
 ### Daily Bike Counts
 
