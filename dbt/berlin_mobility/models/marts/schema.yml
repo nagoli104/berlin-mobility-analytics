@@ -1,0 +1,66 @@
+version: 2
+
+models:
+  - name: fact_mobility_weather
+    description: Hourly station-level bike counts enriched with station metadata and Berlin weather observations.
+    columns:
+      - name: observed_at
+        description: Timestamp of the hourly bike count observation.
+        tests:
+          - not_null
+      - name: observed_local_at
+        description: Observation timestamp converted to Europe/Berlin local time.
+      - name: station_id
+        description: Bike counting station identifier.
+        tests:
+          - not_null
+      - name: bike_count
+        description: Observed bike count for the station and hour.
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: true
+      - name: observed_date
+        description: Calendar date of the observation.
+      - name: observed_hour
+        description: Hour of day in local time.
+      - name: observed_isodow
+        description: ISO day of week, where Monday is 1 and Sunday is 7.
+      - name: is_weekend
+        description: True when the observation falls on Saturday or Sunday.
+      - name: station_description
+        description: Human-readable station description.
+      - name: station_latitude
+        description: Station latitude.
+      - name: station_longitude
+        description: Station longitude.
+      - name: station_installed_date
+        description: Date the counting station was installed.
+      - name: station_direction
+        description: Count direction described by the source metadata.
+      - name: temperature_2m
+        description: Air temperature at 2 meters.
+      - name: apparent_temperature
+        description: Apparent temperature.
+      - name: precipitation
+        description: Hourly precipitation amount.
+      - name: weather_code
+        description: Open-Meteo weather condition code.
+      - name: cloud_cover
+        description: Cloud cover percentage.
+      - name: wind_speed_10m
+        description: Wind speed at 10 meters.
+      - name: relative_humidity_2m
+        description: Relative humidity at 2 meters.
+      - name: wind_gusts_10m
+        description: Wind gust speed at 10 meters.
+      - name: weather_description
+        description: Human-readable weather condition.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - observed_at
+              - station_id
