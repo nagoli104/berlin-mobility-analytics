@@ -1,0 +1,38 @@
+version: 2
+
+sources:
+  - name: raw
+    database: "{{ env_var('MOBILITY_DB') }}"
+    schema: public
+    tables:
+      - name: raw_mobility_counts
+        columns:
+          - name: observed_at
+            tests:
+              - not_null
+          - name: station_id
+            tests:
+              - not_null
+          - name: bike_count
+            tests:
+              - not_null
+        tests:
+          - dbt_utils.unique_combination_of_columns:
+              arguments:
+                combination_of_columns:
+                  - observed_at
+                  - station_id
+
+      - name: raw_station_metadata
+        columns:
+          - name: station_id
+            tests:
+              - not_null
+              - unique
+
+      - name: raw_weather_hourly
+        columns:
+          - name: date
+            tests:
+              - not_null
+              - unique

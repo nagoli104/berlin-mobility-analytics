@@ -1,0 +1,14 @@
+name: berlin_mobility
+version: "0.1.0"
+config-version: 2
+
+profile: berlin_mobility
+
+model-paths:
+  - models
+
+models:
+  berlin_mobility:
+    staging:
+      +materialized: view
+

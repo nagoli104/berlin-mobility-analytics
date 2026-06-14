@@ -2,7 +2,7 @@
 
 This project uses Docker Compose to run:
 
-- PostgreSQL (metadata + analytics database)
+- PostgreSQL (Airflow metadata, Metabase application storage, analytics database)
 - Apache Airflow (webserver + scheduler)
 - Metabase (BI dashboard)
 
@@ -12,11 +12,30 @@ All services are configured via a `.env` file located in the project root.
 
 ### 1️⃣ Environment Setup
 
+Create a project-local Python environment with `uv`:
+
+    uv sync
+
+Run host-side extraction scripts through that environment:
+
+    uv run python scripts/bike_data_extraction.py --help
+    uv run python scripts/openmeteo_weather_export.py --help
+
+Airflow runs in Docker. If you need to import-check Airflow DAGs on the host, install the optional Airflow dependency group:
+
+    uv sync --group airflow
+
+dbt also runs from the project-local Python environment. Install the optional dbt dependency group with:
+
+    uv sync --group dbt
+
 Create a local `.env` file based on `.env.example`:
 
     cp .env.example .env
 
 Adjust values if needed.
+
+If `.env` already exists from an earlier project version, add any new variables from `.env.example`, especially `AIRFLOW_DB`, `METABASE_DB`, and `MOBILITY_DB`.
 
 ⚠️ The `.env` file is not committed to the repository.
 
@@ -35,6 +54,16 @@ Wait until the container exits with:
 This step:
 - Migrates the Airflow metadata database
 - Creates the Admin user
+
+PostgreSQL initializes three local databases on first volume creation:
+
+- `airflow` for Airflow metadata
+- `metabase` for Metabase application state
+- `mobility` for analytics data
+
+If you already created the Postgres volume before these databases existed, recreate the local volume:
+
+    docker compose --env-file .env -f docker/docker-compose.yml down -v
 
 ---
 
@@ -64,7 +93,7 @@ Airflow login credentials are defined in `.env`.
 
 Connect to the database:
 
-    docker exec -it mobility_postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB}
+    docker exec -it mobility_postgres psql -U ${POSTGRES_USER} -d ${MOBILITY_DB}
 
 Check connection:
 
@@ -97,6 +126,38 @@ To remove volumes (⚠️ deletes database data):
 
 ---
 
+### 7️⃣ Run dbt
+
+dbt reads database credentials from environment variables. Export the local `.env` values into the current shell before running dbt:
+
+    set -a
+    source .env
+    set +a
+
+Install dbt dependencies:
+
+    uv run dbt deps --project-dir dbt/berlin_mobility
+
+Check the connection:
+
+    uv run dbt debug \
+      --project-dir dbt/berlin_mobility \
+      --profiles-dir dbt/berlin_mobility
+
+Build staging views:
+
+    uv run dbt run \
+      --project-dir dbt/berlin_mobility \
+      --profiles-dir dbt/berlin_mobility
+
+Run dbt tests:
+
+    uv run dbt test \
+      --project-dir dbt/berlin_mobility \
+      --profiles-dir dbt/berlin_mobility
+
+---
+
 ## Project Architecture (Local)
 
 Host (Mac)
@@ -118,6 +179,7 @@ Airflow connects internally to Postgres via the Docker network using the service
 ## Notes
 
 - Airflow metadata is stored in PostgreSQL.
+- Airflow, Metabase, and analytics use separate PostgreSQL databases.
 - `.env` variables are injected using `--env-file`.
 - The `airflow-init` service is a one-time bootstrap container.
 - This setup is intended for local development only.

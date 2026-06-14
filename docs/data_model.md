@@ -94,7 +94,19 @@ The current exported datasets can be understood as:
 - `mobility_metadata.csv` → proto-`dim_station`
 - weather export CSV → proto-`fact_weather_hourly`
 
-These files are not yet warehouse tables, but they already establish the analytical grain, keys, and field structure of the model.
+These files can be loaded into raw PostgreSQL tables before dbt staging. They already establish the analytical grain, keys, and field structure of the model.
+
+Current raw table mapping:
+
+- `mobility_long.csv` → `raw_mobility_counts`
+- `mobility_metadata.csv` → `raw_station_metadata`
+- weather export CSV → `raw_weather_hourly`
+
+The first dbt layer materializes staging views in the `analytics` schema:
+
+- `stg_mobility_counts`
+- `stg_station_metadata`
+- `stg_weather_hourly`
 
 ---
 
@@ -282,7 +294,7 @@ A combined hourly table can be formed from:
 
 ## Current limitations
 
-- the bike extraction script currently defines the year range in code rather than via CLI arguments
+- the bike extraction script does not yet extract Excel formatting-based quality flags
 - the weather extraction script operates on a single coordinate pair per run
 - no explicit station activation filter is currently applied using `installed`
 - no quality flag is derived from Excel formatting

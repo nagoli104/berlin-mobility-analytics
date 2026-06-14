@@ -11,14 +11,16 @@ echo "Metabase is ready."
 
 echo "Checking whether a real admin user already exists..."
 USER_COUNT=$(python - <<'PY'
+import os
+
 import psycopg2
 
 conn = psycopg2.connect(
     host="postgres",
     port=5432,
-    dbname="metabase",
-    user="airflow",
-    password="airflow",
+    dbname=os.environ["METABASE_DB"],
+    user=os.environ["POSTGRES_USER"],
+    password=os.environ["POSTGRES_PASSWORD"],
 )
 cur = conn.cursor()
 cur.execute("""
@@ -68,21 +70,28 @@ if [ "$DB_EXISTS" = "True" ]; then
   echo "Datasource 'mobility' already exists. Skipping creation."
 else
   echo "Adding mobility datasource..."
+  DATASOURCE_PAYLOAD=$(python - <<'PY'
+import json
+import os
+
+print(json.dumps({
+    "name": "mobility",
+    "engine": "postgres",
+    "details": {
+        "host": "postgres",
+        "port": 5432,
+        "dbname": os.environ["MOBILITY_DB"],
+        "user": os.environ["POSTGRES_USER"],
+        "password": os.environ["POSTGRES_PASSWORD"],
+        "ssl": False,
+    },
+}))
+PY
+)
   curl -sSf -X POST "$METABASE_URL/api/database" \
     -H "Content-Type: application/json" \
     -H "X-Metabase-Session: $SESSION" \
-    -d '{
-      "name":"mobility",
-      "engine":"postgres",
-      "details":{
-        "host":"postgres",
-        "port":5432,
-        "dbname":"mobility",
-        "user":"airflow",
-        "password":"airflow",
-        "ssl":false
-      }
-    }' >/dev/null
+    -d "$DATASOURCE_PAYLOAD" >/dev/null
   echo "Datasource added."
 fi
 

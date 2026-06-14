@@ -214,5 +214,11 @@ __marimo__/
 *.sqlite-shm
 *.sqlite-wal
 
+# dbt local artifacts
+dbt/**/.user.yml
+dbt/**/dbt_packages/
+dbt/**/logs/
+dbt/**/target/
+
 # exclude local data files
 data/

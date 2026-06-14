@@ -5,7 +5,7 @@ The project currently uses two standalone extraction scripts:
 - `bike_data_extraction.py`
 - `openmeteo_weather_export.py`
 
-Together, they produce the raw CSV inputs for later modeling steps in SQL/dbt and downstream analysis in Metabase.
+Together, they produce the raw CSV inputs. The utility script `load_csv_to_postgres.py` loads those files into PostgreSQL for later modeling in SQL/dbt and downstream analysis in Metabase.
 
 ---
 
@@ -64,9 +64,25 @@ A simple direction derivation is currently applied based on whether the descript
 - `Nord`
 - `Süd`
 
-### Current scope
+### Parameters
 
-At the moment, the script is parameterized internally through the `main()` function and currently loads only the selected year range defined there.
+The script is implemented as a command-line tool with defaults matching the current 2025 extraction.
+
+Common parameters:
+
+- `--file-path`
+- `--start-year`
+- `--end-year`
+- `--output-counts`
+- `--output-metadata`
+
+Example:
+
+    uv run python scripts/bike_data_extraction.py \
+      --start-year 2025 \
+      --end-year 2025 \
+      --output-counts data/mobility_long.csv \
+      --output-metadata data/mobility_metadata.csv
 
 ### Notes
 
@@ -147,7 +163,44 @@ The output includes:
 
 ---
 
-## 3. Modeling relevance
+## 3. Loading CSVs into PostgreSQL
+
+After exporting the local `.env` values into your shell, the extracted CSV files can be loaded into the local `mobility` PostgreSQL database with:
+
+    uv run python scripts/load_csv_to_postgres.py \
+      --counts data/mobility_long.csv \
+      --metadata data/mobility_metadata.csv \
+      --weather data/weather_data_2015_2025.csv
+
+By default, the loader truncates and reloads the target raw tables. Use `--if-exists append` to append instead.
+
+The loader creates these raw tables if they do not already exist:
+
+- `raw_mobility_counts`
+- `raw_station_metadata`
+- `raw_weather_hourly`
+
+The session timezone is set to `Europe/Berlin` before loading so local mobility timestamps without an explicit offset are interpreted consistently.
+
+### Raw data validation
+
+After loading, run the raw data checks with:
+
+    uv run python scripts/validate_raw_data.py
+
+The validation script checks basic raw-layer assumptions:
+
+- raw tables are populated
+- required timestamp and station keys are present
+- mobility station-hour keys are unique
+- bike counts are not negative
+- station metadata IDs are unique
+- station coordinates are in plausible ranges
+- weather timestamps are unique
+
+---
+
+## 4. Modeling relevance
 
 These two extraction scripts form the raw data layer of the project.
 
@@ -183,25 +236,21 @@ Possible join keys for v1:
 
 ---
 
-## 4. Current limitations
+## 5. Current limitations
 
-- The bike extraction script is currently configured through values in `main()` rather than command-line parameters.
 - Excel formatting-based quality flags in the mobility workbook are not yet extracted.
 - The weather extraction script currently operates on one coordinate pair per run.
-- No schema validation or automated data quality checks are implemented yet.
-- The extracted CSVs currently represent raw-to-staged outputs, not final analytical marts.
+- Data quality checks are basic raw-table checks, not full dbt tests yet.
+- The loaded PostgreSQL tables are raw tables, not final analytical marts.
 
 ---
 
-## 5. Planned next steps
+## 6. Planned next steps
 
-- extend bike extraction to cover the full intended year range
+- run bike extraction for the full intended year range
 - define the first stable analytical grain for integrated mobility and weather data
 - decide whether weather should be modeled:
   - at one Berlin-wide location
   - or at station level
-- add data quality checks for:
-  - invalid timestamps
-  - duplicate station-hour rows
-  - structurally missing vs technically missing observations
-- implement dbt staging models on top of the exported CSVs
+- implement dbt staging models on top of the raw PostgreSQL tables
+- extend data quality checks for structurally missing vs technically missing observations
