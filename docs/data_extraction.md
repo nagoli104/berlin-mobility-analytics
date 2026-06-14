@@ -165,10 +165,9 @@ The output includes:
 
 ## 3. Loading CSVs into PostgreSQL
 
-The extracted CSV files can be loaded into the local `mobility` PostgreSQL database with:
+After exporting the local `.env` values into your shell, the extracted CSV files can be loaded into the local `mobility` PostgreSQL database with:
 
     uv run python scripts/load_csv_to_postgres.py \
-      --database-url postgresql://airflow:airflow@localhost:5432/mobility \
       --counts data/mobility_long.csv \
       --metadata data/mobility_metadata.csv \
       --weather data/weather_data_2015_2025.csv
@@ -187,8 +186,7 @@ The session timezone is set to `Europe/Berlin` before loading so local mobility 
 
 After loading, run the raw data checks with:
 
-    uv run python scripts/validate_raw_data.py \
-      --database-url postgresql://airflow:airflow@localhost:5432/mobility
+    uv run python scripts/validate_raw_data.py
 
 The validation script checks basic raw-layer assumptions:
 

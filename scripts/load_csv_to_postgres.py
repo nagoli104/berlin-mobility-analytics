@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 import psycopg2
@@ -18,8 +19,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--database-url",
-        required=True,
-        help="Postgres connection URL, e.g. postgresql://user:password@localhost:5432/mobility",
+        default=os.environ.get("MOBILITY_DATABASE_URL"),
+        help="Postgres connection URL. Defaults to MOBILITY_DATABASE_URL.",
     )
     parser.add_argument(
         "--counts",
@@ -44,7 +45,11 @@ def parse_args() -> argparse.Namespace:
         default="replace",
         help="Whether to truncate raw tables before loading.",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if not args.database_url:
+        parser.error("--database-url or MOBILITY_DATABASE_URL is required")
+
+    return args
 
 
 def require_file(path: Path) -> None:
