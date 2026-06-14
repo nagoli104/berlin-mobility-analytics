@@ -25,6 +25,10 @@ Airflow runs in Docker. If you need to import-check Airflow DAGs on the host, in
 
     uv sync --group airflow
 
+dbt also runs from the project-local Python environment. Install the optional dbt dependency group with:
+
+    uv sync --group dbt
+
 Create a local `.env` file based on `.env.example`:
 
     cp .env.example .env
@@ -119,6 +123,38 @@ The table should still exist, confirming volume persistence.
 To remove volumes (⚠️ deletes database data):
 
     docker compose --env-file .env -f docker/docker-compose.yml down -v
+
+---
+
+### 7️⃣ Run dbt
+
+dbt reads database credentials from environment variables. Export the local `.env` values into the current shell before running dbt:
+
+    set -a
+    source .env
+    set +a
+
+Install dbt dependencies:
+
+    uv run dbt deps --project-dir dbt/berlin_mobility
+
+Check the connection:
+
+    uv run dbt debug \
+      --project-dir dbt/berlin_mobility \
+      --profiles-dir dbt/berlin_mobility
+
+Build staging views:
+
+    uv run dbt run \
+      --project-dir dbt/berlin_mobility \
+      --profiles-dir dbt/berlin_mobility
+
+Run dbt tests:
+
+    uv run dbt test \
+      --project-dir dbt/berlin_mobility \
+      --profiles-dir dbt/berlin_mobility
 
 ---
 

@@ -102,6 +102,12 @@ Current raw table mapping:
 - `mobility_metadata.csv` → `raw_station_metadata`
 - weather export CSV → `raw_weather_hourly`
 
+The first dbt layer materializes staging views in the `analytics` schema:
+
+- `stg_mobility_counts`
+- `stg_station_metadata`
+- `stg_weather_hourly`
+
 ---
 
 ## Mobility model

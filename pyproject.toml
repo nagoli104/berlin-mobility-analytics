@@ -18,4 +18,6 @@ airflow = [
     "apache-airflow==2.8.1",
     "apache-airflow-providers-postgres",
 ]
-
+dbt = [
+    "dbt-postgres",
+]
