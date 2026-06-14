@@ -11,4 +11,5 @@ models:
   berlin_mobility:
     staging:
       +materialized: view
-
+    marts:
+      +materialized: view
